@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neo Tokyo Block</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="hud hud-carousel" id="hud-carousel">
+      <button class="hud-nav hud-nav-prev" id="hud-prev" type="button" aria-label="Previous hint">
+        <span>&lsaquo;</span>
+      </button>
+      <div class="hud-viewport" id="hud-viewport">
+        <div class="hud-track" id="hud-track">
+          <section class="hud-slide is-active">
+            <p class="eyebrow">Exploration Sim Prototype</p>
+            <h1>Neo Tokyo / District 01</h1>
+            <p>Slow neon drifting across two connected blocks.</p>
+          </section>
+          <section class="hud-slide">
+            <p class="panel-title">WASD / Arrows / Thumb</p>
+            <p>Walk both city blocks with smoothed movement, camera easing, and touch-friendly motion.</p>
+          </section>
+          <section class="hud-slide">
+            <p class="panel-title">Tap / Click / Space</p>
+            <p>Tap or click to move, or use Space to focus on a nearby landmark for a story beat.</p>
+          </section>
+          <section class="hud-slide">
+            <p class="panel-title">R / M</p>
+            <p>Use roof access nodes. Press M to start or mute the Neon Rain Reverie soundtrack.</p>
+          </section>
+        </div>
+      </div>
+      <button class="hud-nav hud-nav-next" id="hud-next" type="button" aria-label="Next hint">
+        <span>&rsaquo;</span>
+      </button>
+      <div class="hud-dots" id="hud-dots" aria-label="HUD slides"></div>
+    </div>
+
+    <div class="status-bar">
+      <div>
+        <span class="status-label">District</span>
+        <span id="zone-name">South Arcade Walk</span>
+      </div>
+      <div>
+        <span class="status-label">Signal</span>
+        <span id="signal-status">Stable</span>
+      </div>
+      <div>
+        <span class="status-label">Discovery</span>
+        <span id="discovery-status">0 / 8</span>
+      </div>
+      <div>
+        <span class="status-label">Level</span>
+        <span id="level-status">Street</span>
+      </div>
+    </div>
+
+    <div class="message-box">
+      <p id="message-title">Touch down in the rain.</p>
+      <p id="message-body">
+        Two connected blocks are open tonight: crosswalk steam, market glow,
+        rooftop bridges, and a skyline stacked against the storm.
+      </p>
+    </div>
+
+    <canvas id="game"></canvas>
+
+    <div class="mobile-controls" id="mobile-controls">
+      <div class="thumb-zone" id="thumb-zone">
+        <div class="thumb-base" id="thumb-base">
+          <div class="thumb-knob" id="thumb-knob"></div>
+        </div>
+      </div>
+      <div class="mobile-actions">
+        <button class="touch-button" id="focus-button" type="button">Focus</button>
+        <button class="touch-button" id="roof-button" type="button">Roof</button>
+        <button class="touch-button" id="audio-button" type="button">Audio</button>
+      </div>
+    </div>
+
+    <script defer src="./game.js"></script>
+  </body>
+</html>
