@@ -66,7 +66,7 @@ const player = {
   x: 9.2,
   y: 13.9,
   z: 0,
-  radius: 0.18,
+  radius: 0.16,
   speed: 3.9,
   bob: 0,
   surfaceId: null,
@@ -475,7 +475,7 @@ function setupWorld() {
     h: 3,
     height: 3,
     roofWalkable: true,
-    roofInset: 0.08,
+    roofInset: 0.03,
     palette: ["#39424d", "#161d26", "#546271"],
     windows: "capsule",
     signs: [{ side: "south", level: 1, color: palette.neonLime, text: "SLEEP" }],
@@ -491,7 +491,7 @@ function setupWorld() {
     h: 4,
     height: 5,
     roofWalkable: true,
-    roofInset: 0.08,
+    roofInset: 0.03,
     palette: ["#5c4228", "#28190f", "#9a6a3e"],
     windows: "sparse",
     signs: [
@@ -513,7 +513,7 @@ function setupWorld() {
     h: 2,
     height: 5,
     roofWalkable: true,
-    roofInset: 0.08,
+    roofInset: 0.03,
     palette: ["#38402a", "#14190f", "#5d6c43"],
     windows: "sparse",
     signs: [{ side: "north", level: 1, color: palette.neonGold, text: "CHA" }],
@@ -529,7 +529,7 @@ function setupWorld() {
     h: 5,
     height: 8,
     roofWalkable: true,
-    roofInset: 0.1,
+    roofInset: 0.04,
     palette: ["#25455b", "#112331", "#3c7da7"],
     windows: "bands",
     signs: [
@@ -567,7 +567,7 @@ function setupWorld() {
     h: 4,
     height: 5,
     roofWalkable: true,
-    roofInset: 0.08,
+    roofInset: 0.03,
     palette: ["#3f365f", "#191427", "#7d67be"],
     windows: "dense",
     signs: [
@@ -589,7 +589,7 @@ function setupWorld() {
     h: 3,
     height: 5,
     roofWalkable: true,
-    roofInset: 0.08,
+    roofInset: 0.03,
     palette: ["#34485a", "#141e29", "#567ea2"],
     windows: "dense",
     signs: [
@@ -605,20 +605,20 @@ function setupWorld() {
   addRoofBridge({
     id: "market-catwalk",
     label: "Lantern Catwalk",
-    x: 6.65,
-    y: 14.45,
-    w: 1.72,
-    h: 1.02,
+    x: 6.52,
+    y: 14.34,
+    w: 1.96,
+    h: 1.2,
     z: 5,
   });
 
   addRoofBridge({
     id: "arcade-bridge",
     label: "Arcade Skybridge",
-    x: 21.7,
-    y: 14.18,
-    w: 1.5,
-    h: 1.08,
+    x: 21.56,
+    y: 14.08,
+    w: 1.74,
+    h: 1.24,
     z: 5,
   });
 
@@ -910,50 +910,81 @@ function isTileWalkableAtLevel(tileX, tileY, z) {
 }
 
 function canOccupy(nx, ny, nz) {
-  const sampleRadius = player.radius * 0.85;
+  const groundRadius = player.radius * 0.78;
+  const roofRadius = player.radius * 0.52;
   const offsets = [
     [0, 0],
-    [sampleRadius, 0],
-    [-sampleRadius, 0],
-    [0, sampleRadius],
-    [0, -sampleRadius],
-    [sampleRadius * 0.7, sampleRadius * 0.7],
-    [sampleRadius * 0.7, -sampleRadius * 0.7],
-    [-sampleRadius * 0.7, sampleRadius * 0.7],
-    [-sampleRadius * 0.7, -sampleRadius * 0.7],
+    [groundRadius, 0],
+    [-groundRadius, 0],
+    [0, groundRadius],
+    [0, -groundRadius],
+    [groundRadius * 0.72, groundRadius * 0.72],
+    [groundRadius * 0.72, -groundRadius * 0.72],
+    [-groundRadius * 0.72, groundRadius * 0.72],
+    [-groundRadius * 0.72, -groundRadius * 0.72],
   ];
 
   if (nz > 0.1) {
-    return offsets.every(([ox, oy]) => Boolean(getSurfaceAt(nx + ox, ny + oy, nz)));
+    const roofOffsets = [
+      [0, 0],
+      [roofRadius, 0],
+      [-roofRadius, 0],
+      [0, roofRadius],
+      [0, -roofRadius],
+      [roofRadius * 0.72, roofRadius * 0.72],
+      [roofRadius * 0.72, -roofRadius * 0.72],
+      [-roofRadius * 0.72, roofRadius * 0.72],
+      [-roofRadius * 0.72, -roofRadius * 0.72],
+    ];
+    return roofOffsets.every(([ox, oy]) => Boolean(getSurfaceAt(nx + ox, ny + oy, nz)));
   }
 
   return offsets.every(([ox, oy]) => isPointWalkableGround(nx + ox, ny + oy));
 }
 
-function findNearestWalkableTile(tileX, tileY, z, maxRadius = 4) {
+function findNearestWalkableTile(tileX, tileY, z, maxRadius = 4, preferredScreenPoint = null, camera = null) {
   if (isTileWalkableAtLevel(tileX, tileY, z)) {
     return { x: tileX, y: tileY };
   }
 
   for (let radius = 1; radius <= maxRadius; radius += 1) {
+    const candidates = [];
     for (let y = tileY - radius; y <= tileY + radius; y += 1) {
       for (let x = tileX - radius; x <= tileX + radius; x += 1) {
         if (Math.abs(x - tileX) !== radius && Math.abs(y - tileY) !== radius) {
           continue;
         }
         if (isTileWalkableAtLevel(x, y, z)) {
-          return { x, y };
+          candidates.push({ x, y });
         }
       }
     }
+
+    if (candidates.length === 0) {
+      continue;
+    }
+
+    if (!preferredScreenPoint || !camera) {
+      return candidates[0];
+    }
+
+    candidates.sort((a, b) => {
+      const screenA = isoProject(a.x + 0.5, a.y + 0.5, z, camera);
+      const screenB = isoProject(b.x + 0.5, b.y + 0.5, z, camera);
+      const distA = Math.hypot(screenA.x - preferredScreenPoint.x, screenA.y - preferredScreenPoint.y);
+      const distB = Math.hypot(screenB.x - preferredScreenPoint.x, screenB.y - preferredScreenPoint.y);
+      return distA - distB;
+    });
+
+    return candidates[0];
   }
 
   return null;
 }
 
-function buildPath(startX, startY, goalX, goalY, z) {
+function buildPath(startX, startY, goalX, goalY, z, preferredScreenPoint = null, camera = null) {
   const start = findNearestWalkableTile(startX, startY, z, 2);
-  const goal = findNearestWalkableTile(goalX, goalY, z, 4);
+  const goal = findNearestWalkableTile(goalX, goalY, z, 4, preferredScreenPoint, camera);
   if (!start || !goal) {
     return [];
   }
@@ -1023,12 +1054,20 @@ function buildPath(startX, startY, goalX, goalY, z) {
   return path.slice(1);
 }
 
-function setMoveDestination(worldX, worldY) {
+function setMoveDestination(worldX, worldY, preferredScreenPoint = null, camera = null) {
   const targetTileX = Math.floor(worldX);
   const targetTileY = Math.floor(worldY);
   const startTileX = Math.floor(player.x);
   const startTileY = Math.floor(player.y);
-  const path = buildPath(startTileX, startTileY, targetTileX, targetTileY, player.z);
+  const path = buildPath(
+    startTileX,
+    startTileY,
+    targetTileX,
+    targetTileY,
+    player.z,
+    preferredScreenPoint,
+    camera
+  );
   if (path.length === 0) {
     return;
   }
@@ -1169,6 +1208,32 @@ function drawTile(tile, camera, time) {
         : rgba(palette.neonCyan, 0.05 + pulse * 0.05);
     drawDiamond(point.x, point.y, glowColor);
   }
+
+  const puddlePulse = 0.14 + (Math.sin(time * 1.8 + tile.x * 0.8 + tile.y) + 1) * 0.04;
+  if (tile.type === "road" || tile.type === "plaza" || tile.type === "promenade") {
+    ctx.strokeStyle = tile.type === "road"
+      ? `rgba(180, 220, 255, ${puddlePulse * 0.35})`
+      : `rgba(255, 255, 255, ${puddlePulse * 0.45})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(point.x - 10, point.y + 4);
+    ctx.lineTo(point.x + 8, point.y + 1);
+    ctx.stroke();
+
+    ctx.fillStyle = tile.type === "plaza"
+      ? rgba(palette.neonPink, 0.08 + puddlePulse * 0.18)
+      : rgba(palette.neonCyan, 0.05 + puddlePulse * 0.12);
+    ctx.beginPath();
+    ctx.ellipse(point.x + 5, point.y + 6, 8, 3, -0.35, 0, TAU);
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = "rgba(255,255,255,0.035)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(point.x, point.y - TILE_H * 0.5 + 2);
+  ctx.lineTo(point.x + TILE_W * 0.5 - 3, point.y);
+  ctx.stroke();
 }
 
 function drawBuildingWindows(building, camera) {
@@ -1333,7 +1398,48 @@ function drawRoofRailings(building, camera) {
   ctx.stroke();
 }
 
-function drawExtrudedBox(building, camera) {
+function drawBuildingShadow(building, camera) {
+  const base = isoProject(building.x, building.y, 0, camera);
+  const baseEast = isoProject(building.x + building.w, building.y, 0, camera);
+  const baseSouth = isoProject(building.x, building.y + building.h, 0, camera);
+  const baseCorner = isoProject(building.x + building.w, building.y + building.h, 0, camera);
+  const offsetX = 18 + building.height * 1.8;
+  const offsetY = 10 + building.height * 1.1;
+
+  ctx.beginPath();
+  ctx.moveTo(base.x + offsetX * 0.3, base.y + offsetY * 0.25);
+  ctx.lineTo(baseEast.x + offsetX, baseEast.y + offsetY * 0.2);
+  ctx.lineTo(baseCorner.x + offsetX * 0.9, baseCorner.y + offsetY);
+  ctx.lineTo(baseSouth.x + offsetX * 0.2, baseSouth.y + offsetY * 0.9);
+  ctx.closePath();
+  const shadow = ctx.createLinearGradient(base.x, base.y, baseCorner.x + offsetX, baseCorner.y + offsetY);
+  shadow.addColorStop(0, "rgba(0, 0, 0, 0.18)");
+  shadow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = shadow;
+  ctx.fill();
+}
+
+function drawFacadeAccents(building, camera, time) {
+  const accentColor = building.signs[0]?.color || palette.neonCyan;
+
+  for (let localY = 0.35; localY < building.h - 0.15; localY += 1.3) {
+    const strip = isoProject(building.x + 0.02, building.y + localY, building.height * 0.45, camera);
+    ctx.fillStyle = rgba(accentColor, 0.08 + (Math.sin(time * 2 + localY + building.x) + 1) * 0.04);
+    ctx.fillRect(strip.x - 2, strip.y - 20, 3, 36);
+  }
+
+  for (let localX = 0.45; localX < building.w - 0.15; localX += 1.25) {
+    const vent = isoProject(building.x + localX, building.y + 0.03, building.height * 0.25, camera);
+    ctx.fillStyle = "rgba(18, 24, 34, 0.5)";
+    ctx.fillRect(vent.x - 8, vent.y - 3, 16, 6);
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.strokeRect(vent.x - 8, vent.y - 3, 16, 6);
+  }
+}
+
+function drawExtrudedBox(building, camera, time) {
+  drawBuildingShadow(building, camera);
+
   const top = isoProject(building.x, building.y, building.height, camera);
   const topEast = isoProject(building.x + building.w, building.y, building.height, camera);
   const topSouth = isoProject(building.x, building.y + building.h, building.height, camera);
@@ -1360,6 +1466,15 @@ function drawExtrudedBox(building, camera) {
   roofGradient.addColorStop(1, rgba(rightColor, 0.96));
   ctx.fillStyle = roofGradient;
   ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(top.x + 8, top.y + 4);
+  ctx.lineTo(topCorner.x - 8, topCorner.y - 4);
+  ctx.moveTo(topSouth.x + 8, topSouth.y - 4);
+  ctx.lineTo(topEast.x - 8, topEast.y + 4);
+  ctx.stroke();
 
   ctx.beginPath();
   ctx.moveTo(top.x, top.y);
@@ -1389,6 +1504,7 @@ function drawExtrudedBox(building, camera) {
   ctx.lineWidth = 1;
   ctx.stroke();
 
+  drawFacadeAccents(building, camera, time);
   drawBuildingWindows(building, camera);
   drawRoofDetails(building, camera);
   drawRoofRailings(building, camera);
@@ -1407,6 +1523,15 @@ function drawRoofBridge(surface, camera, time) {
   ctx.strokeStyle = rgba(palette.neonCyan, 0.55 + Math.sin(time * 3.2) * 0.08);
   ctx.lineWidth = 2;
   ctx.strokeRect(-width * 0.5, -height * 0.5, width, height);
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.28, -height * 0.18);
+  ctx.lineTo(width * 0.28, -height * 0.18);
+  ctx.moveTo(-width * 0.28, height * 0.18);
+  ctx.lineTo(width * 0.28, height * 0.18);
+  ctx.stroke();
+  ctx.fillStyle = rgba(palette.neonCyan, 0.08 + (Math.sin(time * 2.6) + 1) * 0.04);
+  ctx.fillRect(-width * 0.35, -height * 0.12, width * 0.7, height * 0.24);
   ctx.restore();
 }
 
@@ -1610,6 +1735,75 @@ function drawLandmarkBeacons(camera, time) {
     ctx.beginPath();
     ctx.ellipse(base.x, base.y, 18 + Math.sin(time * 3 + landmark.x) * 3, 9, 0, 0, TAU);
     ctx.stroke();
+  }
+}
+
+function drawNeonReflections(camera, time) {
+  const reflectiveProps = props.filter((prop) =>
+    prop.kind === "vending" || prop.kind === "billboard" || prop.kind === "access"
+  );
+
+  for (const prop of reflectiveProps) {
+    const base = isoProject(prop.x, prop.y, 0, camera);
+    const color = prop.color || (prop.kind === "billboard" ? palette.neonPink : palette.neonCyan);
+    const pulse = 0.12 + (Math.sin(time * 2.8 + prop.x) + 1) * 0.05;
+    const glow = ctx.createLinearGradient(base.x, base.y - 2, base.x, base.y + 34);
+    glow.addColorStop(0, rgba(color, pulse * 0.65));
+    glow.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.moveTo(base.x - 8, base.y + 1);
+    ctx.lineTo(base.x + 8, base.y + 1);
+    ctx.lineTo(base.x + 16, base.y + 28);
+    ctx.lineTo(base.x - 16, base.y + 28);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawForegroundMist(time) {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const mist = ctx.createLinearGradient(0, height * 0.72, 0, height);
+  mist.addColorStop(0, "rgba(120, 210, 255, 0)");
+  mist.addColorStop(0.55, "rgba(20, 40, 58, 0.08)");
+  mist.addColorStop(1, "rgba(3, 6, 12, 0.28)");
+  ctx.fillStyle = mist;
+  ctx.fillRect(0, height * 0.68, width, height * 0.32);
+
+  for (let i = 0; i < 3; i += 1) {
+    const x = width * (0.2 + i * 0.28) + Math.sin(time * 0.12 + i) * 32;
+    const y = height * (0.8 + i * 0.035);
+    const fog = ctx.createRadialGradient(x, y, 10, x, y, 180);
+    fog.addColorStop(0, "rgba(180, 235, 255, 0.055)");
+    fog.addColorStop(1, "rgba(180, 235, 255, 0)");
+    ctx.fillStyle = fog;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 220, 64, 0, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function drawScreenFx() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  const vignette = ctx.createRadialGradient(
+    width * 0.5,
+    height * 0.45,
+    width * 0.18,
+    width * 0.5,
+    height * 0.45,
+    width * 0.72
+  );
+  vignette.addColorStop(0, "rgba(0,0,0,0)");
+  vignette.addColorStop(1, "rgba(0,0,0,0.22)");
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "rgba(255,255,255,0.025)";
+  for (let y = 0; y < height; y += 4) {
+    ctx.fillRect(0, y, width, 1);
   }
 }
 
@@ -1930,7 +2124,12 @@ function updateNpcs(delta) {
 function handleWorldPointer(clientX, clientY) {
   const camera = cameraState;
   const worldPoint = screenToWorld(clientX, clientY, player.z, camera);
-  setMoveDestination(worldPoint.x, worldPoint.y);
+  setMoveDestination(
+    worldPoint.x,
+    worldPoint.y,
+    { x: clientX, y: clientY },
+    camera
+  );
 }
 
 function updateJoystickFromEvent(event) {
@@ -2012,10 +2211,12 @@ function render(time) {
     drawTile(tile, camera, time);
   }
 
+  drawNeonReflections(camera, time);
+
   drawLandmarkBeacons(camera, time);
 
   for (const building of buildings) {
-    drawExtrudedBox(building, camera);
+    drawExtrudedBox(building, camera, time);
   }
 
   for (const surface of roofSurfaces) {
@@ -2051,6 +2252,8 @@ function render(time) {
   }
 
   drawRain(time);
+  drawForegroundMist(time);
+  drawScreenFx();
 }
 
 function tick(timestamp) {
