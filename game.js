@@ -51,6 +51,8 @@ const palette = {
   sidewalk: "#2d3548",
   plaza: "#243247",
   promenade: "#23333f",
+  interior: "#2c2a36",
+  lounge: "#253540",
   lot: "#273044",
   roof: "#20283b",
   roofEdge: "#42536c",
@@ -439,6 +441,9 @@ function initializeBaseTiles() {
   paintRect(19, 13, 4, 2, { type: "plaza" });
   paintRect(5, 13, 6, 2, { type: "promenade" });
   paintRect(20, 5, 6, 2, { type: "promenade" });
+  paintRect(2, 16, 5, 2, { type: "interior" });
+  paintRect(18, 16, 5, 2, { type: "interior" });
+  paintRect(24, 6, 3, 2, { type: "lounge" });
 }
 
 function setupWorld() {
@@ -550,12 +555,16 @@ function setupWorld() {
     y: 3,
     w: 3,
     h: 3,
-    height: 4,
-    roofWalkable: false,
+    height: 8,
+    roofWalkable: true,
+    roofInset: 0.04,
     palette: ["#4c5a6d", "#1e2532", "#75869f"],
     windows: "bands",
     signs: [{ side: "south", level: 1.5, color: palette.neonCyan, text: "CLINIC" }],
-    roofDetails: [{ dx: 1.1, dy: 1.3, kind: "satellite" }],
+    roofDetails: [
+      { dx: 1.1, dy: 1.3, kind: "satellite" },
+      { dx: 1.8, dy: 1.8, kind: "garden" },
+    ],
   });
 
   addBuilding({
@@ -622,6 +631,16 @@ function setupWorld() {
     z: 5,
   });
 
+  addRoofBridge({
+    id: "clinic-bridge",
+    label: "Clinic Link",
+    x: 23.18,
+    y: 4.08,
+    w: 1.14,
+    h: 1.02,
+    z: 8,
+  });
+
   const lampPositions = [
     [1.3, 4.0], [1.2, 9.0], [1.1, 14.0], [4.0, 1.2], [9.0, 1.1], [20.0, 1.1],
     [28.0, 4.0], [28.1, 10.0], [28.1, 15.0], [4.0, 18.0], [9.0, 18.1], [20.0, 18.1],
@@ -656,6 +675,11 @@ function setupWorld() {
   props.push({ kind: "gate", x: 21.5, y: 12.4, z: 0 });
   props.push({ kind: "billboard", x: 6.2, y: 2.1, z: 0.4 });
   props.push({ kind: "billboard", x: 23.8, y: 16.6, z: 0.4 });
+  props.push({ kind: "portal", x: 4.5, y: 16.8, z: 0, color: palette.neonGold, label: "MARKET" });
+  props.push({ kind: "portal", x: 20.5, y: 16.8, z: 0, color: palette.neonPink, label: "ARCADE" });
+  props.push({ kind: "portal", x: 25.5, y: 7.1, z: 0, color: palette.neonCyan, label: "CLINIC" });
+  props.push({ kind: "awning", x: 4.5, y: 16.2, z: 0, color: palette.neonGold });
+  props.push({ kind: "awning", x: 20.5, y: 16.2, z: 0, color: palette.neonPink });
 
   addAccessPoint({
     id: "capsule-stairs",
@@ -696,6 +720,16 @@ function setupWorld() {
     targetSurfaceId: "arcade-roof",
     color: palette.neonPink,
     label: "Arcade fire escape",
+  });
+  addAccessPoint({
+    id: "clinic-lift",
+    x: 25.7,
+    y: 6.9,
+    targetX: 25.4,
+    targetY: 5.2,
+    targetSurfaceId: "sky-clinic-roof",
+    color: palette.neonCyan,
+    label: "Clinic stair",
   });
 
   addLandmark({
@@ -780,6 +814,17 @@ function setupWorld() {
     radius: 1.4,
     level: 8,
     zone: "Relay Roof",
+  });
+  addLandmark({
+    id: "clinic-roof",
+    title: "Clinic Rooftop Garden",
+    body:
+      "A clean white glow cuts through the rain. The clinic roof blends triage lights with a tiny medicinal herb deck and a skyline view.",
+    x: 25.3,
+    y: 4.7,
+    radius: 1.15,
+    level: 8,
+    zone: "Clinic Roof",
   });
 
   addNpc({
@@ -1182,6 +1227,12 @@ function drawTile(tile, camera, time) {
     edge = "rgba(120, 140, 180, 0.08)";
   } else if (tile.type === "sidewalk") {
     color = palette.sidewalk;
+  } else if (tile.type === "interior") {
+    color = palette.interior;
+    edge = rgba(palette.neonGold, 0.12);
+  } else if (tile.type === "lounge") {
+    color = palette.lounge;
+    edge = rgba(palette.neonCyan, 0.14);
   } else if (tile.type === "plaza") {
     color = palette.plaza;
     edge = rgba(palette.neonPink, 0.18);
@@ -1200,20 +1251,26 @@ function drawTile(tile, camera, time) {
     ctx.stroke();
   }
 
-  if (tile.type === "plaza" || tile.type === "promenade") {
+  if (tile.type === "plaza" || tile.type === "promenade" || tile.type === "interior" || tile.type === "lounge") {
     const pulse = (Math.sin(time * 2.4 + tile.x + tile.y) + 1) * 0.5;
     const glowColor =
       tile.type === "plaza"
         ? rgba(palette.neonPink, 0.07 + pulse * 0.07)
-        : rgba(palette.neonCyan, 0.05 + pulse * 0.05);
+        : tile.type === "interior"
+          ? rgba(palette.neonGold, 0.06 + pulse * 0.06)
+          : tile.type === "lounge"
+            ? rgba(palette.neonCyan, 0.07 + pulse * 0.05)
+            : rgba(palette.neonCyan, 0.05 + pulse * 0.05);
     drawDiamond(point.x, point.y, glowColor);
   }
 
   const puddlePulse = 0.14 + (Math.sin(time * 1.8 + tile.x * 0.8 + tile.y) + 1) * 0.04;
-  if (tile.type === "road" || tile.type === "plaza" || tile.type === "promenade") {
+  if (tile.type === "road" || tile.type === "plaza" || tile.type === "promenade" || tile.type === "interior" || tile.type === "lounge") {
     ctx.strokeStyle = tile.type === "road"
       ? `rgba(180, 220, 255, ${puddlePulse * 0.35})`
-      : `rgba(255, 255, 255, ${puddlePulse * 0.45})`;
+      : tile.type === "interior"
+        ? `rgba(255, 220, 160, ${puddlePulse * 0.42})`
+        : `rgba(255, 255, 255, ${puddlePulse * 0.45})`;
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(point.x - 10, point.y + 4);
@@ -1222,6 +1279,10 @@ function drawTile(tile, camera, time) {
 
     ctx.fillStyle = tile.type === "plaza"
       ? rgba(palette.neonPink, 0.08 + puddlePulse * 0.18)
+      : tile.type === "interior"
+        ? rgba(palette.neonGold, 0.07 + puddlePulse * 0.12)
+        : tile.type === "lounge"
+          ? rgba(palette.neonCyan, 0.08 + puddlePulse * 0.14)
       : rgba(palette.neonCyan, 0.05 + puddlePulse * 0.12);
     ctx.beginPath();
     ctx.ellipse(point.x + 5, point.y + 6, 8, 3, -0.35, 0, TAU);
@@ -1535,6 +1596,30 @@ function drawRoofBridge(surface, camera, time) {
   ctx.restore();
 }
 
+function drawRoofSurfaceGuide(surface, camera, time) {
+  const base = isoProject(surface.x + surface.w * 0.5, surface.y + surface.h * 0.5, surface.z, camera);
+  const width = Math.max(22, surface.w * TILE_W * 0.42);
+  const height = Math.max(12, surface.h * TILE_H * 0.42);
+  ctx.save();
+  ctx.translate(base.x, base.y);
+  ctx.fillStyle = surface.kind === "bridge"
+    ? rgba(palette.neonCyan, 0.08 + (Math.sin(time * 2.4 + surface.x) + 1) * 0.04)
+    : rgba(palette.neonGold, 0.045);
+  ctx.beginPath();
+  ctx.ellipse(0, 2, width, height, 0, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = surface.kind === "bridge"
+    ? rgba(palette.neonCyan, 0.22)
+    : rgba(palette.neonGold, 0.14);
+  ctx.setLineDash([8, 8]);
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, width * 0.9, height * 0.78, 0, 0, TAU);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
 function drawLamp(prop, camera, time) {
   const base = isoProject(prop.x, prop.y, 0, camera);
   ctx.strokeStyle = "rgba(30, 40, 56, 0.95)";
@@ -1665,6 +1750,42 @@ function drawAccess(prop, camera, time) {
   ctx.arc(base.x, base.y - 32 - Math.sin(time * 3 + prop.x) * 2, 5, 0, TAU);
   ctx.fill();
   ctx.shadowBlur = 0;
+}
+
+function drawPortal(prop, camera, time) {
+  const base = isoProject(prop.x, prop.y, 0, camera);
+  const glow = ctx.createRadialGradient(base.x, base.y - 10, 4, base.x, base.y - 10, 30);
+  glow.addColorStop(0, rgba(prop.color, 0.32 + (Math.sin(time * 2.8 + prop.x) + 1) * 0.05));
+  glow.addColorStop(1, rgba(prop.color, 0));
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.ellipse(base.x, base.y - 8, 26, 18, 0, 0, TAU);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(12, 16, 28, 0.9)";
+  ctx.fillRect(base.x - 14, base.y - 28, 28, 26);
+  ctx.strokeStyle = rgba(prop.color, 0.8);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(base.x - 14, base.y - 28, 28, 26);
+  ctx.fillStyle = rgba(prop.color, 0.9);
+  ctx.font = '8px Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif';
+  ctx.textAlign = "center";
+  ctx.fillText(prop.label || "OPEN", base.x, base.y - 12);
+}
+
+function drawAwning(prop, camera, time) {
+  const base = isoProject(prop.x, prop.y, 0, camera);
+  ctx.fillStyle = "rgba(18, 24, 38, 0.92)";
+  ctx.beginPath();
+  ctx.moveTo(base.x - 30, base.y - 24);
+  ctx.lineTo(base.x + 30, base.y - 24);
+  ctx.lineTo(base.x + 18, base.y - 6);
+  ctx.lineTo(base.x - 18, base.y - 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(prop.color, 0.7 + (Math.sin(time * 2.2 + prop.x) + 1) * 0.08);
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 
 function drawCharacter(x, y, z, color, camera, bob, scale = 1) {
@@ -2220,6 +2341,7 @@ function render(time) {
   }
 
   for (const surface of roofSurfaces) {
+    drawRoofSurfaceGuide(surface, camera, time);
     if (surface.kind === "bridge") {
       drawRoofBridge(surface, camera, time);
     }
@@ -2233,6 +2355,8 @@ function render(time) {
     gate: drawGate,
     billboard: drawBillboard,
     access: drawAccess,
+    portal: drawPortal,
+    awning: drawAwning,
   };
 
   const sceneItems = [
